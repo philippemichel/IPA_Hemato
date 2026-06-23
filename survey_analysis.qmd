@@ -1,0 +1,133 @@
+---
+title: "Practice Survey Analysis"
+format:
+  html:
+    toc: true
+execute:
+  warning: false
+  message: false
+---
+
+```{r}
+library(tidyverse)
+library(ggplot2)
+library(gtsummary)
+```
+
+## Study context
+
+This practice survey includes one participant per profession. We combine:
+
+- Open-text answers (qualitative, text-mining view)
+- Multiple-choice questionnaire answers (quantitative)
+
+```{r}
+participants <- tibble(
+  participant_id = paste0("P", 1:6),
+  profession = c("Hematologist", "Nurse", "Pharmacist", "Biologist", "Data Manager", "Resident")
+)
+
+open_text <- tribble(
+  ~participant_id, ~question, ~response,
+  "P1", "Main challenge", "Coordinating urgent transfusion decisions with complete patient context",
+  "P1", "What helps", "Shared protocols and quick multidisciplinary discussions",
+  "P1", "Improvement priority", "Better digital tracking of blood product availability",
+  "P2", "Main challenge", "High workload and rapid symptom monitoring during treatment",
+  "P2", "What helps", "Team communication and clear bedside checklists",
+  "P2", "Improvement priority", "More time for patient education and discharge planning",
+  "P3", "Main challenge", "Stock constraints and treatment adaptation in real time",
+  "P3", "What helps", "Early prescription review and pharmacy-clinic coordination",
+  "P3", "Improvement priority", "Automated alerts for interactions and shortages",
+  "P4", "Main challenge", "Interpreting complex biomarkers for therapy selection",
+  "P4", "What helps", "Standardized reporting and close clinician feedback",
+  "P4", "Improvement priority", "Faster sample logistics and integrated data pipelines",
+  "P5", "Main challenge", "Linking fragmented data across clinical systems",
+  "P5", "What helps", "Structured data entry and shared data dictionaries",
+  "P5", "Improvement priority", "Dashboards for outcomes and operational indicators",
+  "P6", "Main challenge", "Balancing training needs with daily patient flow",
+  "P6", "What helps", "Mentorship and practical decision support tools",
+  "P6", "Improvement priority", "Protected learning time and simulation sessions"
+)
+
+questionnaire <- tibble(
+  participant_id = paste0("P", 1:6),
+  confidence_guidelines = factor(c("High", "Medium", "High", "Medium", "Medium", "Low"), levels = c("Low", "Medium", "High"), ordered = TRUE),
+  digital_tools_satisfaction = factor(c("Medium", "Low", "Medium", "High", "Medium", "Low"), levels = c("Low", "Medium", "High"), ordered = TRUE),
+  interdisciplinary_meetings = c("Weekly", "Weekly", "Monthly", "Monthly", "Weekly", "Weekly"),
+  training_need = c("Yes", "Yes", "No", "Yes", "No", "Yes")
+)
+
+survey_data <- participants %>%
+  left_join(questionnaire, by = "participant_id")
+```
+
+## Text-mining of open responses
+
+```{r}
+stop_words_local <- c(
+  "and", "with", "for", "the", "of", "in", "to", "a", "is", "more",
+  "time", "better", "shared", "quick", "close", "daily"
+)
+
+tokens <- open_text %>%
+  left_join(participants, by = "participant_id") %>%
+  mutate(
+    response = str_to_lower(response),
+    response = str_replace_all(response, "[^a-z\\s]", " "),
+    response = str_squish(response)
+  ) %>%
+  separate_rows(response, sep = "\\s+") %>%
+  rename(word = response) %>%
+  filter(!word %in% stop_words_local, nchar(word) > 2)
+
+word_counts <- tokens %>%
+  count(word, sort = TRUE)
+
+word_counts %>%
+  slice_head(n = 10)
+```
+
+```{r}
+tokens %>%
+  count(profession, word, sort = TRUE) %>%
+  group_by(profession) %>%
+  slice_max(n, n = 3, with_ties = FALSE) %>%
+  ungroup() %>%
+  ggplot(aes(x = reorder(word, n), y = n, fill = profession)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~profession, scales = "free_y") +
+  labs(
+    title = "Top recurring terms by profession",
+    x = "Term",
+    y = "Count"
+  ) +
+  coord_flip()
+```
+
+## Multiple-choice questionnaire comparison
+
+```{r}
+survey_data %>%
+  select(profession, confidence_guidelines, digital_tools_satisfaction, interdisciplinary_meetings, training_need) %>%
+  tbl_summary(by = profession, statistic = all_categorical() ~ "{n} ({p}%)") %>%
+  add_n() %>%
+  bold_labels()
+```
+
+```{r}
+survey_data %>%
+  pivot_longer(
+    cols = c(confidence_guidelines, digital_tools_satisfaction, interdisciplinary_meetings, training_need),
+    names_to = "question",
+    values_to = "answer"
+  ) %>%
+  count(question, answer) %>%
+  ggplot(aes(x = answer, y = n, fill = answer)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~question, scales = "free_x") +
+  labs(
+    title = "Distribution of questionnaire responses",
+    x = "Response",
+    y = "Participants"
+  )
+```
