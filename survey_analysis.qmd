@@ -65,8 +65,7 @@ survey_data <- participants %>%
 
 ```{r}
 stop_words_local <- c(
-  "and", "with", "for", "the", "of", "in", "to", "a", "is", "more",
-  "time", "better", "shared", "quick", "close", "daily"
+  "and", "with", "for", "the", "of", "in", "to", "a", "is"
 )
 
 tokens <- open_text %>%
