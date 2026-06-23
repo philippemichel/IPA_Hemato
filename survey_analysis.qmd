@@ -10,6 +10,7 @@ execute:
 
 ```{r}
 library(tidyverse)
+library(tidytext)
 library(gtsummary)
 ```
 
@@ -64,11 +65,7 @@ survey_data <- participants %>%
 
 ```{r}
 minimum_token_length <- 3
-stop_words_local <- c(
-  "a", "an", "and", "are", "as", "at", "be", "by", "for", "from",
-  "in", "into", "is", "it", "of", "on", "or", "that", "the", "their",
-  "this", "to", "was", "were", "will", "with"
-)
+stop_words_local <- tidytext::stop_words %>% distinct(word)
 
 tokens <- open_text %>%
   left_join(participants, by = "participant_id") %>%
@@ -79,7 +76,8 @@ tokens <- open_text %>%
   ) %>%
   separate_rows(response, sep = "\\s+") %>%
   rename(word = response) %>%
-  filter(nchar(word) >= minimum_token_length, !word %in% stop_words_local)
+  filter(nchar(word) >= minimum_token_length) %>%
+  anti_join(stop_words_local, by = "word")
 
 tokens %>%
   count(word, sort = TRUE) %>%
@@ -122,14 +120,12 @@ survey_data %>%
     names_to = "question",
     values_to = "answer"
   ) %>%
-  mutate(
-    answer = case_when(
-      question %in% c("confidence_guidelines", "digital_tools_satisfaction") ~ factor(answer, levels = c("Low", "Medium", "High"), ordered = TRUE),
-      TRUE ~ as.factor(answer)
-    )
-  ) %>%
-  count(question, answer) %>%
-  ggplot(aes(x = answer, y = n, fill = answer)) +
+  mutate(answer = as.factor(answer)) %>%
+  count(question, answer, name = "freq") %>%
+  group_by(question) %>%
+  mutate(answer = fct_reorder(answer, freq)) %>%
+  ungroup() %>%
+  ggplot(aes(x = answer, y = freq, fill = answer)) +
   geom_col(show.legend = FALSE) +
   facet_wrap(~question, scales = "free_x") +
   labs(
