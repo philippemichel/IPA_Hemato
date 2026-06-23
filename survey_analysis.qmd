@@ -10,7 +10,6 @@ execute:
 
 ```{r}
 library(tidyverse)
-library(ggplot2)
 library(gtsummary)
 ```
 
@@ -94,7 +93,7 @@ tokens %>%
   ungroup() %>%
   ggplot(aes(x = reorder(word, n), y = n, fill = profession)) +
   geom_col(show.legend = FALSE) +
-  facet_wrap(~profession, scales = "free_y") +
+  facet_wrap(~profession, scales = "free_x") +
   labs(
     title = "Top recurring terms by profession",
     x = "Term",
