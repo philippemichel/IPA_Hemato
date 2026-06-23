@@ -114,22 +114,3 @@ survey_data %>%
   add_n() %>%
   bold_labels()
 ```
-
-```{r}
-survey_data %>%
-  pivot_longer(
-    cols = c(confidence_guidelines, digital_tools_satisfaction, interdisciplinary_meetings, training_need),
-    names_to = "question",
-    values_to = "answer"
-  ) %>%
-  mutate(answer = factor(as.character(answer), levels = c(likert_levels, "Monthly", "Weekly", "No", "Yes"))) %>%
-  count(question, answer, name = "freq") %>%
-  ggplot(aes(x = answer, y = freq, fill = answer)) +
-  geom_col(show.legend = FALSE) +
-  facet_wrap(~question, scales = "free_x") +
-  labs(
-    title = "Distribution of questionnaire responses",
-    x = "Response",
-    y = "Participants"
-  )
-```
