@@ -27,6 +27,8 @@ participants <- tibble(
   profession = c("Hematologist", "Nurse", "Pharmacist", "Biologist", "Data Manager", "Resident")
 )
 
+likert_levels <- c("Low", "Medium", "High")
+
 open_text <- tribble(
   ~participant_id, ~question, ~response,
   "P1", "Main challenge", "Coordinating urgent transfusion decisions with complete patient context",
@@ -51,8 +53,8 @@ open_text <- tribble(
 
 questionnaire <- tibble(
   participant_id = paste0("P", 1:6),
-  confidence_guidelines = factor(c("High", "Medium", "High", "Medium", "Medium", "Low"), levels = c("Low", "Medium", "High"), ordered = TRUE),
-  digital_tools_satisfaction = factor(c("Medium", "Low", "Medium", "High", "Medium", "Low"), levels = c("Low", "Medium", "High"), ordered = TRUE),
+  confidence_guidelines = factor(c("High", "Medium", "High", "Medium", "Medium", "Low"), levels = likert_levels, ordered = TRUE),
+  digital_tools_satisfaction = factor(c("Medium", "Low", "Medium", "High", "Medium", "Low"), levels = likert_levels, ordered = TRUE),
   interdisciplinary_meetings = c("Weekly", "Weekly", "Monthly", "Monthly", "Weekly", "Weekly"),
   training_need = c("Yes", "Yes", "No", "Yes", "No", "Yes")
 )
@@ -120,11 +122,8 @@ survey_data %>%
     names_to = "question",
     values_to = "answer"
   ) %>%
-  mutate(answer = as.factor(answer)) %>%
+  mutate(answer = factor(as.character(answer), levels = c(likert_levels, "Monthly", "Weekly", "No", "Yes"))) %>%
   count(question, answer, name = "freq") %>%
-  group_by(question) %>%
-  mutate(answer = fct_reorder(answer, freq)) %>%
-  ungroup() %>%
   ggplot(aes(x = answer, y = freq, fill = answer)) +
   geom_col(show.legend = FALSE) +
   facet_wrap(~question, scales = "free_x") +
