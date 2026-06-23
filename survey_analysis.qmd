@@ -88,11 +88,11 @@ tokens %>%
 
 ```{r}
 tokens %>%
-  count(profession, word, sort = TRUE) %>%
+  count(profession, word, sort = TRUE, name = "freq") %>%
   group_by(profession) %>%
-  slice_max(n, n = 3, with_ties = FALSE) %>%
+  slice_max(freq, n = 3, with_ties = FALSE) %>%
   ungroup() %>%
-  ggplot(aes(x = reorder(word, n), y = n, fill = profession)) +
+  ggplot(aes(x = reorder(word, freq), y = freq, fill = profession)) +
   geom_col(show.legend = FALSE) +
   facet_wrap(~profession, scales = "free_x") +
   labs(
@@ -124,7 +124,7 @@ survey_data %>%
   ) %>%
   mutate(
     answer = case_when(
-      question %in% c("confidence_guidelines", "digital_tools_satisfaction") ~ factor(as.character(answer), levels = c("Low", "Medium", "High"), ordered = TRUE),
+      question %in% c("confidence_guidelines", "digital_tools_satisfaction") ~ factor(answer, levels = c("Low", "Medium", "High"), ordered = TRUE),
       TRUE ~ as.factor(answer)
     )
   ) %>%
