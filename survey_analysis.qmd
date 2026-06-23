@@ -64,22 +64,25 @@ survey_data <- participants %>%
 
 ```{r}
 min_word_length <- 3
+stop_words_local <- c(
+  "a", "an", "and", "are", "as", "at", "be", "by", "for", "from",
+  "in", "into", "is", "it", "of", "on", "or", "that", "the", "their",
+  "this", "to", "was", "were", "will", "with"
+)
 
 tokens <- open_text %>%
   left_join(participants, by = "participant_id") %>%
   mutate(
     response = str_to_lower(response),
-    response = str_replace_all(response, "[^a-z0-9\\s]", " "),
+    response = str_replace_all(response, "[^a-z0-9\\s-]", " "),
     response = str_squish(response)
   ) %>%
   separate_rows(response, sep = "\\s+") %>%
   rename(word = response) %>%
-  filter(nchar(word) >= min_word_length)
+  filter(nchar(word) >= min_word_length, !word %in% stop_words_local)
 
-word_counts <- tokens %>%
-  count(word, sort = TRUE)
-
-word_counts %>%
+tokens %>%
+  count(word, sort = TRUE) %>%
   slice_head(n = 10)
 ```
 
