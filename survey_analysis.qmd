@@ -20,6 +20,7 @@ This practice survey includes one participant per profession. We combine:
 
 - Open-text answers (qualitative, text-mining view)
 - Multiple-choice questionnaire answers (quantitative)
+- Likert responses interpreted from Low (lowest) to High (highest)
 
 ```{r}
 participants <- tibble(
@@ -92,7 +93,7 @@ tokens %>%
   group_by(profession) %>%
   slice_max(freq, n = top_n_terms, with_ties = FALSE) %>%
   ungroup() %>%
-  ggplot(aes(x = reorder(word, freq), y = freq, fill = profession)) +
+  ggplot(aes(x = word, y = freq, fill = profession)) +
   geom_col(show.legend = FALSE) +
   facet_wrap(~profession, scales = "free_x") +
   labs(
