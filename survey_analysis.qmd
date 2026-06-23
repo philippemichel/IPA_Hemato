@@ -63,20 +63,17 @@ survey_data <- participants %>%
 ## Text-mining of open responses
 
 ```{r}
-stop_words_local <- c(
-  "and", "with", "for", "the", "of", "in", "to", "a", "is"
-)
-
 tokens <- open_text %>%
   left_join(participants, by = "participant_id") %>%
   mutate(
     response = str_to_lower(response),
-    response = str_replace_all(response, "[^a-z\\s]", " "),
+    response = str_replace_all(response, "[^a-z0-9\\s-]", " "),
+    response = str_replace_all(response, "-", " "),
     response = str_squish(response)
   ) %>%
   separate_rows(response, sep = "\\s+") %>%
   rename(word = response) %>%
-  filter(!word %in% stop_words_local, nchar(word) > 2)
+  filter(nchar(word) > 2)
 
 word_counts <- tokens %>%
   count(word, sort = TRUE)
@@ -104,10 +101,12 @@ tokens %>%
 
 ## Multiple-choice questionnaire comparison
 
+Because this is a practice dataset with one participant per profession, the table below is shown overall (not stratified).
+
 ```{r}
 survey_data %>%
   select(profession, confidence_guidelines, digital_tools_satisfaction, interdisciplinary_meetings, training_need) %>%
-  tbl_summary(by = profession, statistic = all_categorical() ~ "{n} ({p}%)") %>%
+  tbl_summary(statistic = all_categorical() ~ "{n} ({p}%)") %>%
   add_n() %>%
   bold_labels()
 ```
