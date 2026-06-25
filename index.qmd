@@ -1,0 +1,104 @@
+---
+subtitle: "Analyse simple du texte"
+---
+
+On ne travaille que sur les mots (ou pour être exact les racines des mots) en analysant uniquement leur fréquence dans le texte.
+
+```{r}
+#| label: setup
+
+library(tidyverse)
+library(dplyr)
+library(readODS)
+library(gtsummary)
+library(kableExtra)
+library(plotly)
+library(ggsci)
+
+
+# Charger
+library("tm")
+library("SnowballC")
+library("wordcloud")
+library("RColorBrewer")
+
+
+mesmots <- c("cest", "ça", "donc", "fait", "parce", "peut","quand",
+             "être", "puis", "aussi", "plus", "fois", "là", "sous", "après",
+             "peux", "alors", "beaucoup", "comme", "quil")
+```
+
+```{r}
+#| label: import
+
+tt <- readLines("datas/entretien 1.txt")
+docs <- Corpus(VectorSource(tt))
+toSpace <- content_transformer(function (x , pattern ) gsub(pattern, " ", x))
+docs <- tm_map(docs, removePunctuation)
+docs <- tm_map(docs, toSpace, ",")
+docs <- tm_map(docs, toSpace, "’")
+docs <- tm_map(docs, content_transformer(tolower))
+docs <- tm_map(docs, stripWhitespace)
+docs <- tm_map(docs, removeWords, stopwords("fr"))
+docs <- tm_map(docs, removeWords, mesmots)
+ docs <- tm_map(docs, stemDocument)
+```
+
+# Entretiens
+
+## Entretien 1
+
+```{r}
+#| label: tbl-MOTS1
+#| tbl-cap: "Mots les plus fréquents - Entretien 1"
+
+dtm <- TermDocumentMatrix(docs)
+m <- as.matrix(dtm)
+v <- sort(rowSums(m),decreasing=TRUE)
+d <- data.frame(word = names(v),freq=v)
+kbl(head(d, 10)) |> 
+  kable_material(c("striped", "hover"))
+```
+
+```{r}
+#| label: fig-nuage1
+#| fig-cap: "Mots les plus fréquents - Entretien 1"
+#| fig-alt: "Mots les plus fréquents - entretien 1. Les valeurs sont dans le tableau précédent"
+
+set.seed(1834)
+gg <- wordcloud(words = d$word, freq = d$freq, min.freq = 1,
+          max.words=200, random.order=FALSE, rot.per=0.35, 
+          colors=brewer.pal(8, "Dark2"))
+ggplotly(gg)
+```
+
+```{r}
+#| label: fig-MOTS1
+#| fig-cap: "Mots les plus fréquents - Entretien 1"
+#| fig-alt: "Mots les plus fréquents - entretien 1. Les valeurs sont dans le tableau précédent"
+
+gg <- d |> 
+  dplyr::filter(freq>6) |> 
+  ggplot() +
+  aes(x = fct_reorder(word,freq, .desc = TRUE), y = freq) +
+  geom_bar(stat="identity") +
+  labs(
+    title = "Mots les plus fréquents - Entretien 1",
+    y = "Fréquence",
+    caption = "Nombre d'occurence des mots significatifs (réduits à leur racine)  les plus fréquents.",
+  ) +
+  theme_light() +
+  scale_fill_jama() +
+  theme(
+    plot.title = element_text(size = 14, face = "bold"),
+    plot.subtitle = element_text(size = 12),
+    axis.title.y.right = element_blank(),
+    legend.title = element_text(size = 12),
+    axis.title.y = element_blank(),
+    axis.text.x = element_text(size = 12),
+    axis.text.y = element_text(size = 12),
+    legend.position = "none") +
+coord_flip()
+  
+ggplotly(gg)
+```

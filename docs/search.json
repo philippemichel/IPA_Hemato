@@ -1,0 +1,16 @@
+[
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "Entretiens",
+    "section": "",
+    "text": "On ne travaille que sur les mots (ou pour être exact les racines des mots) en analysant uniquement leur fréquence dans le texte.\nCode\nlibrary(tidyverse)\nlibrary(dplyr)\nlibrary(readODS)\nlibrary(gtsummary)\nlibrary(kableExtra)\nlibrary(plotly)\nlibrary(ggsci)\n\n\n# Charger\nlibrary(\"tm\")\nlibrary(\"SnowballC\")\nlibrary(\"wordcloud\")\nlibrary(\"RColorBrewer\")\n\n\nmesmots &lt;- c(\"cest\", \"ça\", \"donc\", \"fait\", \"parce\", \"peut\",\"quand\",\n             \"être\", \"puis\", \"aussi\", \"plus\", \"fois\", \"là\", \"sous\", \"après\",\n             \"peux\", \"alors\", \"beaucoup\", \"comme\", \"quil\")\nCode\ntt &lt;- readLines(\"datas/entretien 1.txt\")\ndocs &lt;- Corpus(VectorSource(tt))\ntoSpace &lt;- content_transformer(function (x , pattern ) gsub(pattern, \" \", x))\ndocs &lt;- tm_map(docs, removePunctuation)\ndocs &lt;- tm_map(docs, toSpace, \",\")\ndocs &lt;- tm_map(docs, toSpace, \"’\")\ndocs &lt;- tm_map(docs, content_transformer(tolower))\ndocs &lt;- tm_map(docs, stripWhitespace)\ndocs &lt;- tm_map(docs, removeWords, stopwords(\"fr\"))\ndocs &lt;- tm_map(docs, removeWords, mesmots)\n docs &lt;- tm_map(docs, stemDocument)"
+  },
+  {
+    "objectID": "index.html#entretien-1",
+    "href": "index.html#entretien-1",
+    "title": "Entretiens",
+    "section": "Entretien 1",
+    "text": "Entretien 1\n\n\nCode\ndtm &lt;- TermDocumentMatrix(docs)\nm &lt;- as.matrix(dtm)\nv &lt;- sort(rowSums(m),decreasing=TRUE)\nd &lt;- data.frame(word = names(v),freq=v)\nkbl(head(d, 10)) |&gt; \n  kable_material(c(\"striped\", \"hover\"))\n\n\n\n\nTable 1: Mots les plus fréquents - Entretien 1\n\n\n\n\n\n\n\nword\nfreq\n\n\n\n\npatient\npatient\n33\n\n\nmédecin\nmédecin\n21\n\n\ntraitement\ntraitement\n17\n\n\nconsult\nconsult\n16\n\n\noral\noral\n12\n\n\nthérapi\nthérapi\n12\n\n\ncertain\ncertain\n8\n\n\neffet\neffet\n8\n\n\nhémato\nhémato\n7\n\n\nvrai\nvrai\n7\n\n\n\n\n\n\n\n\n\n\nCode\nset.seed(1834)\ngg &lt;- wordcloud(words = d$word, freq = d$freq, min.freq = 1,\n          max.words=200, random.order=FALSE, rot.per=0.35, \n          colors=brewer.pal(8, \"Dark2\"))\nggplotly(gg)\n\n\n\n\n\n\n\nFigure 1: Mots les plus fréquents - Entretien 1\n\n\n\n\n\n\n\n\n\n\nFigure 2: Mots les plus fréquents - Entretien 1\n\n\n\n\n\n\n\nCode\ngg &lt;- d |&gt; \n  dplyr::filter(freq&gt;6) |&gt; \n  ggplot() +\n  aes(x = fct_reorder(word,freq, .desc = TRUE), y = freq) +\n  geom_bar(stat=\"identity\") +\n  labs(\n    title = \"Mots les plus fréquents - Entretien 1\",\n    y = \"Fréquence\",\n    caption = \"Nombre d'occurence des mots significatifs (réduits à leur racine)  les plus fréquents.\",\n  ) +\n  theme_light() +\n  scale_fill_jama() +\n  theme(\n    plot.title = element_text(size = 14, face = \"bold\"),\n    plot.subtitle = element_text(size = 12),\n    axis.title.y.right = element_blank(),\n    legend.title = element_text(size = 12),\n    axis.title.y = element_blank(),\n    axis.text.x = element_text(size = 12),\n    axis.text.y = element_text(size = 12),\n    legend.position = \"none\") +\ncoord_flip()\n  \nggplotly(gg)\n\n\n\n\n\n\n\n\nFigure 3: Mots les plus fréquents - Entretien 1"
+  }
+]
