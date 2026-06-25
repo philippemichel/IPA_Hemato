@@ -37,10 +37,6 @@ website:
        - icon: mailbox
          text: mail
          href: mailto:philippe.michel@ght-novo.fr
-  sidebar:
-    style: "docked"
-    pinned: true
-    search: true
   open-graph:
     locale: fr_FR
 format:
@@ -53,6 +49,6 @@ format:
           - sandstone
         dark: cyborg
       fontsize: 1.2em
-toc: true
+toc: false
 warning: false
 message: false

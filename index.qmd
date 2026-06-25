@@ -1,22 +1,22 @@
 ---
 subtitle: "Analyse simple du texte"
 ---
+::: {.panel-tabset}
+
+# Généralités
 
 On ne travaille que sur les mots (ou pour être exact les racines des mots) en analysant uniquement leur fréquence dans le texte.
 
 ```{r}
 #| label: setup
 
-library(tidyverse)
-library(dplyr)
-library(readODS)
-library(gtsummary)
-library(kableExtra)
-library(plotly)
-library(ggsci)
-
-
-# Charger
+library("tidyverse")
+library("dplyr")
+library("readODS")
+library("gtsummary")
+library("kableExtra")
+library("plotly")
+library("ggsci")
 library("tm")
 library("SnowballC")
 library("wordcloud")
@@ -25,13 +25,24 @@ library("RColorBrewer")
 
 mesmots <- c("cest", "ça", "donc", "fait", "parce", "peut","quand",
              "être", "puis", "aussi", "plus", "fois", "là", "sous", "après",
-             "peux", "alors", "beaucoup", "comme", "quil")
+             "peux", "alors", "beaucoup", "comme", "quil", "faut", "voilà",
+             "vont","oui", "peutêtr", "ben", "peu", "tout", "car", "quelqu",
+             "puisqu","ell","vraiment", "évidem", "non","jai", "sai", "déjà",
+             "tous", "avoir","estc", "autr", "...", "quon", "ouai", "entr")
+
+
+prof <- c("IDE en consultation", "Assistante sociale", 
+          "Cadre supérieure de santé", "Pharmacien",
+          "Pharmacien", "Cadre faisant fonction",
+          "Hématologue", "Secrétaire médicale")
 ```
 
 ```{r}
-#| label: import
+#| label: macros-entretiens
 
-tt <- readLines("datas/entretien 1.txt")
+importtxt <- function(ntxt){
+add <- paste0("datas/entretien",ntxt,".txt")
+tt <- readLines(add)
 docs <- Corpus(VectorSource(tt))
 toSpace <- content_transformer(function (x , pattern ) gsub(pattern, " ", x))
 docs <- tm_map(docs, removePunctuation)
@@ -41,49 +52,50 @@ docs <- tm_map(docs, content_transformer(tolower))
 docs <- tm_map(docs, stripWhitespace)
 docs <- tm_map(docs, removeWords, stopwords("fr"))
 docs <- tm_map(docs, removeWords, mesmots)
- docs <- tm_map(docs, stemDocument)
-```
-
-# Entretiens
-
-## Entretien 1
-
-```{r}
-#| label: tbl-MOTS1
-#| tbl-cap: "Mots les plus fréquents - Entretien 1"
-
+docs <- tm_map(docs, stemDocument)
+ #
 dtm <- TermDocumentMatrix(docs)
 m <- as.matrix(dtm)
 v <- sort(rowSums(m),decreasing=TRUE)
-d <- data.frame(word = names(v),freq=v)
-kbl(head(d, 10)) |> 
+docs <- data.frame(freq=v) |> 
+  rownames_to_column(var="mot")
+#
+return(docs)
+ }
+```
+
+
+```{r}
+#| label: macro-tabfq
+tabfq <- function(docs = docs){
+kbl(head(docs, 10)) |> 
   kable_material(c("striped", "hover"))
+}
 ```
 
 ```{r}
-#| label: fig-nuage1
-#| fig-cap: "Mots les plus fréquents - Entretien 1"
-#| fig-alt: "Mots les plus fréquents - entretien 1. Les valeurs sont dans le tableau précédent"
+#| label: macro-nuage
 
-set.seed(1834)
-gg <- wordcloud(words = d$word, freq = d$freq, min.freq = 1,
-          max.words=200, random.order=FALSE, rot.per=0.35, 
+nuage <- function(d = docs){
+  set.seed(1834)
+gg <- wordcloud(words = d$mot, freq = d$freq, min.freq = 1,
+          max.mots=300, random.order=FALSE, rot.per=0.35, 
           colors=brewer.pal(8, "Dark2"))
 ggplotly(gg)
+}
 ```
 
 ```{r}
-#| label: fig-MOTS1
-#| fig-cap: "Mots les plus fréquents - Entretien 1"
-#| fig-alt: "Mots les plus fréquents - entretien 1. Les valeurs sont dans le tableau précédent"
+#| label: macro-figfq
 
-gg <- d |> 
-  dplyr::filter(freq>6) |> 
+figfq <- function(d = docs,nmax = 6){
+  gg <- d |> 
+  dplyr::filter(freq > nmax) |> 
   ggplot() +
-  aes(x = fct_reorder(word,freq, .desc = TRUE), y = freq) +
+  aes(x = fct_reorder(mot,freq, .desc = FALSE), y = freq) +
   geom_bar(stat="identity") +
   labs(
-    title = "Mots les plus fréquents - Entretien 1",
+    title = "Mots les plus fréquents - IDE en consultation",
     y = "Fréquence",
     caption = "Nombre d'occurence des mots significatifs (réduits à leur racine)  les plus fréquents.",
   ) +
@@ -101,4 +113,251 @@ gg <- d |>
 coord_flip()
   
 ggplotly(gg)
+}
 ```
+
+
+# Entretiens
+
+::: {.panel-tabset group="Entretiens"}
+
+## IDE en consultation
+
+```{r}
+#| label: intro
+
+nprof = prof[1]
+```
+
+
+**`r nprof`**
+
+
+```{r}
+#| label: tbl-MOTS1
+#| tbl-cap: "Mots les plus fréquents - IDE en consultation"
+
+
+docs <- importtxt(1)
+tabfq(docs)
+
+```
+
+```{r}
+#| label: fig-nuage1
+#| fig-cap: "Mots les plus fréquents - IDE en consultation"
+#| fig-alt: "Mots les plus fréquents - IDE en consultation. Les valeurs sont dans le tableau précédent"
+
+nuage()
+```
+
+```{r}
+#| label: fig-MOTS1
+#| fig-cap: "Mots les plus fréquents - IDE en consultation"
+#| fig-alt: "Mots les plus fréquents - IDE en consultation. Les valeurs sont dans le tableau précédent"
+
+figfq()
+```
+
+## Assistante sociale
+
+
+```{r}
+#| label: tbl-mots2
+#| tbl-cap: "Mots les plus fréquents - Assistante sociale"
+
+docs <- importtxt(2)
+tabfq(docs)
+
+```
+
+```{r}
+#| label: fig-nuage2
+#| fig-cap: "Mots les plus fréquents - Assistante sociale"
+#| fig-alt: "Mots les plus fréquents - Assistante sociale. Les valeurs sont dans le tableau précédent"
+
+nuage()
+```
+
+```{r}
+#| label: fig-mots2
+#| fig-cap: "Mots les plus fréquents - Assistante sociale"
+#| fig-alt: "Mots les plus fréquents - Assistante sociale. Les valeurs sont dans le tableau précédent"
+
+figfq(nmax = 7)
+```
+
+## Cadre supérieure de santé
+
+
+```{r}
+#| label: tbl-mots3
+#| tbl-cap: "Mots les plus fréquents - Cadre supérieure de santé"
+
+docs <- importtxt(3)
+tabfq(docs)
+
+```
+
+```{r}
+#| label: fig-nuage3
+#| fig-cap: "Mots les plus fréquents - Cadre supérieure de santé"
+#| fig-alt: "Mots les plus fréquents - Cadre supérieure de santé. Les valeurs sont dans le tableau précédent"
+
+nuage()
+```
+
+```{r}
+#| label: fig-MOTS3
+#| fig-cap: "Mots les plus fréquents - Cadre supérieure de santé"
+#| fig-alt: "Mots les plus fréquents - Cadre supérieure de santé. Les valeurs sont dans le tableau précédent"
+
+figfq(nmax = 7)
+```
+
+## Pharmacien
+
+
+```{r}
+#| label: tbl-mots4
+#| tbl-cap: "Mots les plus fréquents - Pharmacien"
+
+docs <- importtxt(4)
+tabfq(docs)
+
+```
+
+```{r}
+#| label: fig-nuage4
+#| fig-cap: "Mots les plus fréquents - Pharmacien"
+#| fig-alt: "Mots les plus fréquents - Pharmacien. Les valeurs sont dans le tableau précédent"
+
+nuage()
+```
+
+```{r}
+#| label: fig-mots4
+#| fig-cap: "Mots les plus fréquents - Pharmacien"
+#| fig-alt: "Mots les plus fréquents - Pharmacien. Les valeurs sont dans le tableau précédent"
+
+figfq(nmax = 7)
+```
+
+## Pharmacien
+
+**`r prof[5]`**
+
+```{r}
+#| label: tbl-mots5
+#| tbl-cap: "Mots les plus fréquents - Pharmacien"
+
+docs <- importtxt(5)
+tabfq(docs)
+
+```
+
+```{r}
+#| label: fig-nuage5
+#| fig-cap: "Mots les plus fréquents - Pharmacien"
+#| fig-alt: "Mots les plus fréquents - Pharmacien. Les valeurs sont dans le tableau précédent"
+
+nuage()
+```
+
+```{r}
+#| label: fig-mots5
+#| fig-cap: "Mots les plus fréquents - Pharmacien"
+#| fig-alt: "Mots les plus fréquents - Pharmacien. Les valeurs sont dans le tableau précédent"
+
+figfq(nmax = )
+```
+
+## Cadre faisant fonction
+
+**`r prof[6]`**
+
+```{r}
+#| label: tbl-mots6
+#| tbl-cap: "Mots les plus fréquents - Cadre faisant fonction"
+
+docs <- importtxt(6)
+tabfq(docs)
+
+```
+
+```{r}
+#| label: fig-nuage6
+#| fig-cap: "Mots les plus fréquents - Cadre faisant fonction"
+#| fig-alt: "Mots les plus fréquents - Cadre faisant fonction. Les valeurs sont dans le tableau précédent"
+
+nuage()
+```
+
+```{r}
+#| label: fig-mots6
+#| fig-cap: "Mots les plus fréquents - Cadre faisant fonction"
+#| fig-alt: "Mots les plus fréquents - Cadre faisant fonction. Les valeurs sont dans le tableau précédent"
+
+figfq(nmax = 7)
+```
+
+## Hématologue
+
+**`r prof[7]`**
+
+```{r}
+#| label: tbl-mots7
+#| tbl-cap: "Mots les plus fréquents - Hématologue"
+
+docs <- importtxt(7)
+tabfq(docs)
+
+```
+
+```{r}
+#| label: fig-nuage7
+#| fig-cap: "Mots les plus fréquents - Hématologue"
+#| fig-alt: "Mots les plus fréquents - Hématologue. Les valeurs sont dans le tableau précédent"
+
+nuage()
+```
+
+```{r}
+#| label: fig-mots7
+#| fig-cap: "Mots les plus fréquents - Hématologue"
+#| fig-alt: "Mots les plus fréquents - Hématologue. Les valeurs sont dans le tableau précédent"
+
+figfq(nmax = 3)
+```
+
+## Secrétaire médicale
+
+**`r prof[8]`**
+
+```{r}
+#| label: tbl-mots8
+#| tbl-cap: "Mots les plus fréquents - Secrétaire médicale"
+
+docs <- importtxt(8)
+tabfq(docs)
+
+```
+
+```{r}
+#| label: fig-nuage8
+#| fig-cap: "Mots les plus fréquents - Secrétaire médicale"
+#| fig-alt: "Mots les plus fréquents - Secrétaire médicale. Les valeurs sont dans le tableau précédent"
+
+nuage()
+```
+
+```{r}
+#| label: fig-mots8
+#| fig-cap: "Mots les plus fréquents - Secrétaire médicale"
+#| fig-alt: "Mots les plus fréquents - Secrétaire médicale. Les valeurs sont dans le tableau précédent"
+
+figfq(nmax = 2)
+```
+
+:::
+:::
