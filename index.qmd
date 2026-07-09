@@ -417,6 +417,7 @@ czz <- zz |>
 ```{r}
 #| label: comp1
 #| fig-cap: Mots les plus fréquents par profession
+#| fig-asp: 1.8
 
 czz |> 
   ggplot() +
