@@ -10,65 +10,81 @@ On ne travaille que sur les mots (ou pour être exact les racines des mots) en a
 ```{r}
 #| label: setup
 
+rm(list = ls())
+
 library("tidyverse")
 library("dplyr")
 library("readODS")
 library("gtsummary")
 library("kableExtra")
 library("plotly")
+library("proustr")
 library("ggsci")
-library("tm")
+library("tidytext")
 library("SnowballC")
-library("wordcloud")
+library("ggwordcloud")
 library("RColorBrewer")
-
-
-mesmots <- c("cest", "ça", "donc", "fait", "parce", "peut","quand",
-             "être", "puis", "aussi", "plus", "fois", "là", "sous", "après",
-             "peux", "alors", "beaucoup", "comme", "quil", "faut", "voilà",
-             "vont","oui", "peutêtr", "ben", "peu", "tout", "car", "quelqu",
-             "puisqu","ell","vraiment", "évidem", "non","jai", "sai", "déjà",
-             "tous", "avoir","estc", "autr", "...", "quon", "ouai", "entr")
-
-
-prof <- c("IDE en consultation", "Assistante sociale", 
-          "Cadre supérieure de santé", "Pharmacien",
-          "Pharmacien", "Cadre faisant fonction",
-          "Hématologue", "Secrétaire médicale")
 ```
 
 ```{r}
-#| label: macros-entretiens
+#| label: import
 
-importtxt <- function(ntxt){
-add <- paste0("datas/entretien",ntxt,".txt")
-tt <- readLines(add)
-docs <- Corpus(VectorSource(tt))
-toSpace <- content_transformer(function (x , pattern ) gsub(pattern, " ", x))
-docs <- tm_map(docs, removePunctuation)
-docs <- tm_map(docs, toSpace, ",")
-docs <- tm_map(docs, toSpace, "’")
-docs <- tm_map(docs, content_transformer(tolower))
-docs <- tm_map(docs, stripWhitespace)
-docs <- tm_map(docs, removeWords, stopwords("fr"))
-docs <- tm_map(docs, removeWords, mesmots)
-docs <- tm_map(docs, stemDocument)
- #
-dtm <- TermDocumentMatrix(docs)
-m <- as.matrix(dtm)
-v <- sort(rowSums(m),decreasing=TRUE)
-docs <- data.frame(freq=v) |> 
-  rownames_to_column(var="mot")
-#
-return(docs)
- }
+tt <- NULL
+htdoc <- NULL
+nn <- 0
+prof <- c("IDE en consultation", "Assistante sociale", 
+          "Cadre supérieure de santé", "Pharmacien 1",
+          "Pharmacien 2", "Cadre faisant fonction",
+          "Hématologue", "Secrétaire médicale")
+
+mesmots <- as_tibble(c("c'est", "ça", "donc", "fait", "parce",
+                       "peut","quand","c'et","ca","qu’il",
+             "être", "puis", "aussi", "plus", "fois", "là", "sous",
+             "après", "peux", "alors", "beaucoup", "comme", "quil",
+             "faut", "voilà", "j'ai", "n’est", "vont","oui", "peutêtr",
+             "ben", "peu", "tout", "car", "quelqu","qu'on",
+             "qu'il","c’est", "qu’on","j’ai",
+             "puisqu","ell","vraiment", "évidem", "non","jai", "sai",
+"déjà", "qu'il", "n'y", "qu'on", "n’ai","n’y",
+             "tous", "avoir","estc", "autr", "...", "quon", "ouai", "entr", "dire", "dirai" ,"commen", "voi"))
+
+
+for(nt in 1:8){
+nomtxt <- paste0("datas/entretien",nt,".txt")
+texte <- readr::read_file(nomtxt)
+profession <- prof[nt]
+ll <- c(nt,profession,texte)
+tt <- rbind(tt,ll)
+}
+stopw <- proust_stopwords()
+stopw <- stopw$word
+
+tt <- as_tibble(tt)
+names(tt) <- c("id", "profession", "texte")
 ```
+
+
+
+```{r}
+#| label: mots
+
+zz <- tt |> 
+tidytext::unnest_tokens(output="mots",
+                        input=texte,
+                        token="words") |> 
+  anti_join(proustr::proust_stopwords(),by=c("mots"="word")) |> 
+  anti_join(as_tibble(mesmots),by=c("mots"="value")) |> 
+  anti_join(get_stopwords("fr"),by=c("mots"="word")) |> 
+  mutate(mots = wordStem(mots, language = "fr"))
+```
+
+
 
 
 ```{r}
 #| label: macro-tabfq
-tabfq <- function(docs = docs){
-kbl(head(docs, 10)) |> 
+tabfq <- function(dd){
+kbl(head(dd, 10)) |> 
   kable_material(c("striped", "hover"))
 }
 ```
@@ -77,11 +93,14 @@ kbl(head(docs, 10)) |>
 #| label: macro-nuage
 
 nuage <- function(d = docs){
-  set.seed(1834)
-gg <- wordcloud(words = d$mot, freq = d$freq, min.freq = 1,
-          max.mots=300, random.order=FALSE, rot.per=0.35, 
-          colors=brewer.pal(8, "Dark2"))
-ggplotly(gg)
+zz |> 
+  count(mots, sort = TRUE) |> 
+  head(50) |> 
+  ggplot() +
+  aes(label = mots, size= n, color = n) +
+  geom_text_wordcloud(grid_size = 20) +
+  scale_size_area(max_size = 20) +
+  scale_color_viridis_c()
 }
 ```
 
@@ -90,9 +109,9 @@ ggplotly(gg)
 
 figfq <- function(d = docs,nmax = 6){
   gg <- d |> 
-  dplyr::filter(freq > nmax) |> 
+  dplyr::filter(n > nmax) |> 
   ggplot() +
-  aes(x = fct_reorder(mot,freq, .desc = FALSE), y = freq) +
+  aes(x = fct_reorder(mots,n, .desc = FALSE), y = n) +
   geom_bar(stat="identity") +
   labs(
     title = "Mots les plus fréquents - IDE en consultation",
@@ -100,7 +119,7 @@ figfq <- function(d = docs,nmax = 6){
     caption = "Nombre d'occurence des mots significatifs (réduits à leur racine)  les plus fréquents.",
   ) +
   theme_light() +
-  scale_fill_jama() +
+  scale_color_viridis_c() +
   theme(
     plot.title = element_text(size = 14, face = "bold"),
     plot.subtitle = element_text(size = 12),
@@ -126,7 +145,11 @@ ggplotly(gg)
 ```{r}
 #| label: intro
 
-nprof = prof[1]
+nn <- nn +1
+nprof = prof[nn]
+docs <- zz |> 
+  dplyr::filter(profession == nprof) |> 
+  dplyr::count(mots, sort = TRUE)
 ```
 
 
@@ -137,10 +160,7 @@ nprof = prof[1]
 #| label: tbl-MOTS1
 #| tbl-cap: "Mots les plus fréquents - IDE en consultation"
 
-
-docs <- importtxt(1)
 tabfq(docs)
-
 ```
 
 ```{r}
@@ -166,9 +186,11 @@ figfq()
 #| label: tbl-mots2
 #| tbl-cap: "Mots les plus fréquents - Assistante sociale"
 
-docs <- importtxt(2)
-tabfq(docs)
-
+nn <- nn +1
+nprof = prof[nn]
+docs <- zz |> 
+  dplyr::filter(profession == nprof) |> 
+  dplyr::count(mots, sort = TRUE)
 ```
 
 ```{r}
@@ -194,8 +216,11 @@ figfq(nmax = 7)
 #| label: tbl-mots3
 #| tbl-cap: "Mots les plus fréquents - Cadre supérieure de santé"
 
-docs <- importtxt(3)
-tabfq(docs)
+nn <- nn +1
+nprof = prof[nn]
+docs <- zz |> 
+  dplyr::filter(profession == nprof) |> 
+  dplyr::count(mots, sort = TRUE)
 
 ```
 
@@ -215,15 +240,18 @@ nuage()
 figfq(nmax = 7)
 ```
 
-## Pharmacien
+## Pharmacien 1
 
 
 ```{r}
 #| label: tbl-mots4
 #| tbl-cap: "Mots les plus fréquents - Pharmacien"
 
-docs <- importtxt(4)
-tabfq(docs)
+nn <- nn +1
+nprof = prof[nn]
+docs <- zz |> 
+  dplyr::filter(profession == nprof) |> 
+  dplyr::count(mots, sort = TRUE)
 
 ```
 
@@ -243,7 +271,7 @@ nuage()
 figfq(nmax = 7)
 ```
 
-## Pharmacien
+## Pharmacien 2
 
 **`r prof[5]`**
 
@@ -251,9 +279,11 @@ figfq(nmax = 7)
 #| label: tbl-mots5
 #| tbl-cap: "Mots les plus fréquents - Pharmacien"
 
-docs <- importtxt(5)
-tabfq(docs)
-
+nn <- nn +1
+nprof = prof[nn]
+docs <- zz |> 
+  dplyr::filter(profession == nprof) |> 
+  dplyr::count(mots, sort = TRUE)
 ```
 
 ```{r}
@@ -280,9 +310,11 @@ figfq(nmax = )
 #| label: tbl-mots6
 #| tbl-cap: "Mots les plus fréquents - Cadre faisant fonction"
 
-docs <- importtxt(6)
-tabfq(docs)
-
+nn <- nn +1
+nprof = prof[nn]
+docs <- zz |> 
+  dplyr::filter(profession == nprof) |> 
+  dplyr::count(mots, sort = TRUE)
 ```
 
 ```{r}
@@ -309,9 +341,11 @@ figfq(nmax = 7)
 #| label: tbl-mots7
 #| tbl-cap: "Mots les plus fréquents - Hématologue"
 
-docs <- importtxt(7)
-tabfq(docs)
-
+nn <- nn +1
+nprof = prof[nn]
+docs <- zz |> 
+  dplyr::filter(profession == nprof) |> 
+  dplyr::count(mots, sort = TRUE)
 ```
 
 ```{r}
@@ -338,9 +372,11 @@ figfq(nmax = 3)
 #| label: tbl-mots8
 #| tbl-cap: "Mots les plus fréquents - Secrétaire médicale"
 
-docs <- importtxt(8)
-tabfq(docs)
-
+nn <- nn +1
+nprof = prof[nn]
+docs <- zz |> 
+  dplyr::filter(profession == nprof) |> 
+  dplyr::count(mots, sort = TRUE)
 ```
 
 ```{r}
@@ -360,4 +396,53 @@ figfq(nmax = 2)
 ```
 
 :::
+
+# Comparaisons
+
+```{r}
+# Comparaisons
+#| label: tbl-mots-comp
+#| tbl-cap: "Mots les plus fréquents"
+
+docs <- zz |> 
+  dplyr::count(mots, sort = TRUE) |> 
+  head(10) 
+
+czz <- zz |> 
+  dplyr::filter(mots %in% docs$mots) |> 
+  dplyr::count(profession, mots, sort = TRUE)|> 
+  mutate(across(is.character, as.factor))
+```
+
+```{r}
+#| label: comp1
+#| fig-cap: Mots les plus fréquents par profession
+
+czz |> 
+  ggplot() +
+  aes(x = fct_reorder(mots,n, .desc = TRUE), y = n, fill = profession) +
+  geom_bar(stat="identity", position = "dodge") +
+  labs(
+    title = "Mots les plus fréquents par profession",
+    caption = "Nombre d'occurences des mots significatifs
+    (réduits à leur racine) les plus fréquents."
+  ) +
+  theme_light() +
+scale_color_viridis_c() +
+  theme(
+    plot.title = element_text(size = 14, face = "bold"),
+    plot.subtitle = element_text(size = 12),
+    axis.title.y.right = element_blank(),
+    legend.title = element_text(size = 12),
+    axis.title.y = element_blank(),
+    axis.title.x = element_blank(),
+    axis.text.x = element_text(size = 12),
+    axis.text.y = element_blank(),
+    legend.position = "none") +
+    facet_grid(profession~.,
+               scales = "free") 
+```
+
+
+
 :::
