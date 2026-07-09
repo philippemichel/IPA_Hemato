@@ -23,6 +23,9 @@ zz |>
 
 
 
+
+
+
  zz |> 
    count(mots, sort = TRUE) |> 
    head(100) |> 
@@ -36,8 +39,6 @@ zz |>
 
 
 
-
-mesmots <- c("déjà", "ca", "pris", "ben", "oui")
 
 
 

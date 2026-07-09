@@ -41,6 +41,9 @@ website:
     locale: fr_FR
 format:
     html:
+      bibliography: stat.bib
+      csl: jama.csl
+      license: "CC BY-SA" 
       code-fold: true
       page-layout: full
       highlight-style: ayu

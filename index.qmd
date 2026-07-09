@@ -1,5 +1,6 @@
 ---
 subtitle: "Analyse simple du texte"
+cache: true
 ---
 ::: {.panel-tabset}
 
@@ -7,9 +8,37 @@ subtitle: "Analyse simple du texte"
 
 On ne travaille que sur les mots (ou pour être exact les racines des mots) en analysant uniquement leur fréquence dans le texte.
 
+
+## Méthodologie statistique
+
+L'étude comprend deux partie : 
+
+- un questionnaire simple dont toutes les réponses sont qualitatives ou ont pu être discrétisées. 
+-  Des entretiens dirigés en texte brut. 
+
+### Questionnaires
+
+Vu le très faible nombre de cas aucun test ne eut être réalisé, l'analyse sera uniquement descriptive. Plusieurs tableaux présentant les réponses seront réalisés (nombre & pourcentage)
+ :
+
+- Profil du répondant
+- Initiation d’une thérapie orale
+- Analyse médicamenteuse et conciliation
+- Évaluation globale du patient
+- Recours aux soins de support
+- Suivi des patients sous thérapies orales
+- Organisation future
+
+### Entretiens
+
+L'analyse des entretiens a été réalisée en *text mining*. L'analyse a été uniquement descriptive & concentrée sur les mots les plus fréquents et les associations de mots.
+
+Une première étape a été la transformation du texte en extrayant les mots qui sont réduits à leur racine (suppression des conjugaisons, des accords etc. - package `tidytext`[@tidytext]). Ensuite les mots considérés comme *vides* (pronoms, auxiliaires, verbe courants...) ont été supprimés pour ne garder que les mots considérés comme intéressants (package `proustr`[@proustr]. Pour chaque répondant les mots les plus utilisés ont été présentés en tableau puis sur deux graphiques : graphique en barre & nuage de mots (package `ggwordcloud`[@ggwordcloud]. Une comparaison des réponses entre les participants a été présentée. Enfin les associations de pot avev les mots les plus fréquents a été réalisée par une analyse en corrélation. Le seuil retenue pour suggérer une corrélation a été un R supérieur à 0,6.
+
+L'analyse statistique a été réalisée avec le logiciel **R**[@rstat] & divers packages. Outre ceux cités dans le texte on a utilisé en particulier `tidyverse` [@tidy] & `baseph` [@baseph].
+
 ```{r}
 #| label: setup
-
 rm(list = ls())
 
 library("tidyverse")
@@ -18,6 +47,7 @@ library("readODS")
 library("gtsummary")
 library("kableExtra")
 library("plotly")
+library("tm")
 library("proustr")
 library("ggsci")
 library("tidytext")
@@ -38,15 +68,13 @@ prof <- c("IDE en consultation", "Assistante sociale",
           "Hématologue", "Secrétaire médicale")
 
 mesmots <- as_tibble(c("c'est", "ça", "donc", "fait", "parce",
-                       "peut","quand","c'et","ca","qu’il",
-             "être", "puis", "aussi", "plus", "fois", "là", "sous",
+                       "peut","quand","c'et","ca","qu’il", "être", "puis", "aussi", "plus", "fois", "là", "sous",
              "après", "peux", "alors", "beaucoup", "comme", "quil",
              "faut", "voilà", "j'ai", "n’est", "vont","oui", "peutêtr",
              "ben", "peu", "tout", "car", "quelqu","qu'on",
-             "qu'il","c’est", "qu’on","j’ai",
-             "puisqu","ell","vraiment", "évidem", "non","jai", "sai",
-"déjà", "qu'il", "n'y", "qu'on", "n’ai","n’y",
-             "tous", "avoir","estc", "autr", "...", "quon", "ouai", "entr", "dire", "dirai" ,"commen", "voi"))
+             "qu'il","c’est", "qu’on","j’ai", "qu'el", "peuvent", "ell",
+             "aller", "donné", "ver", "doit", "donc", "dirai",
+             "puisqu","ell","vraiment", "évidem", "non","jai", "sai","déjà", "qu'il", "n'y", "qu'on", "n’ai","n’y", "tous", "avoir","estc", "autr", "...", "quon", "ouai", "entr", "dire", "dirai" ,"commen", "voi"))
 
 
 for(nt in 1:8){
@@ -61,12 +89,8 @@ stopw <- stopw$word
 
 tt <- as_tibble(tt)
 names(tt) <- c("id", "profession", "texte")
-```
 
-
-
-```{r}
-#| label: mots
+# Racines, mots significatifs, suppression des mots vide
 
 zz <- tt |> 
 tidytext::unnest_tokens(output="mots",
@@ -74,7 +98,8 @@ tidytext::unnest_tokens(output="mots",
                         token="words") |> 
   anti_join(proustr::proust_stopwords(),by=c("mots"="word")) |> 
   anti_join(as_tibble(mesmots),by=c("mots"="value")) |> 
-  anti_join(get_stopwords("fr"),by=c("mots"="word")) |> 
+  dplyr::filter(!mots %in% mesmots$value) |> 
+  dplyr::filter(!mots %in% get_stopwords("fr")$word) |> 
   mutate(mots = wordStem(mots, language = "fr"))
 ```
 
@@ -84,9 +109,11 @@ tidytext::unnest_tokens(output="mots",
 ```{r}
 #| label: macro-tabfq
 tabfq <- function(dd){
-kbl(head(dd, 10)) |> 
+kbl(head(dd, 10)) |>
   kable_material(c("striped", "hover"))
-}
+} |> 
+   kable_styling(fixed_thead = TRUE) |> 
+    scroll_box(width = "100%", height = "80%")
 ```
 
 ```{r}
@@ -95,13 +122,24 @@ kbl(head(dd, 10)) |>
 nuage <- function(d = docs){
 zz |> 
   count(mots, sort = TRUE) |> 
-  head(50) |> 
+  head(20) |> 
   ggplot() +
+    theme_grey() +
   aes(label = mots, size= n, color = n) +
   geom_text_wordcloud(grid_size = 20) +
-  scale_size_area(max_size = 20) +
-  scale_color_viridis_c()
-}
+   scale_size_area(max_size = 20) +
+ scale_color_viridis_c(option = "turbo", direction = 1) +
+  theme(
+    legend.position = "none",
+    plot.title = element_text(size = 14, face = "bold"),
+    plot.subtitle = element_text(size = 12),
+    axis.title.y.right = element_blank(),
+    legend.title = element_text(size = 12),
+    axis.title.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.text.y = element_blank()
+  )
+} 
 ```
 
 ```{r}
@@ -111,7 +149,7 @@ figfq <- function(d = docs,nmax = 6){
   gg <- d |> 
   dplyr::filter(n > nmax) |> 
   ggplot() +
-  aes(x = fct_reorder(mots,n, .desc = FALSE), y = n) +
+  aes(x = fct_reorder(mots,n, .desc = FALSE), y = n, fill = n) +
   geom_bar(stat="identity") +
   labs(
     title = "Mots les plus fréquents - IDE en consultation",
@@ -119,7 +157,7 @@ figfq <- function(d = docs,nmax = 6){
     caption = "Nombre d'occurence des mots significatifs (réduits à leur racine)  les plus fréquents.",
   ) +
   theme_light() +
-  scale_color_viridis_c() +
+   scale_color_viridis_c(option = "turbo", direction = 1) +
   theme(
     plot.title = element_text(size = 14, face = "bold"),
     plot.subtitle = element_text(size = 12),
@@ -129,12 +167,17 @@ figfq <- function(d = docs,nmax = 6){
     axis.text.x = element_text(size = 12),
     axis.text.y = element_text(size = 12),
     legend.position = "none") +
-coord_flip()
+    coord_flip() 
   
 ggplotly(gg)
 }
 ```
 
+
+### Bibiliographie
+
+::: {#refs}
+:::
 
 # Entretiens
 
@@ -168,7 +211,7 @@ tabfq(docs)
 #| fig-cap: "Mots les plus fréquents - IDE en consultation"
 #| fig-alt: "Mots les plus fréquents - IDE en consultation. Les valeurs sont dans le tableau précédent"
 
-nuage()
+nuage(docs)
 ```
 
 ```{r}
@@ -415,11 +458,11 @@ czz <- zz |>
 ```
 
 ```{r}
-#| label: comp1
+#| label: comp-prof
 #| fig-cap: Mots les plus fréquents par profession
-#| fig-asp: 1.8
+#| fig-asp: 1.8 
 
-czz |> 
+aa <- czz |> 
   ggplot() +
   aes(x = fct_reorder(mots,n, .desc = TRUE), y = n, fill = profession) +
   geom_bar(stat="identity", position = "dodge") +
@@ -440,9 +483,95 @@ scale_color_viridis_c() +
     axis.text.x = element_text(size = 12),
     axis.text.y = element_blank(),
     legend.position = "none") +
-    facet_grid(profession~.,
+    facet_grid(profession ~.,
                scales = "free") 
+ggplotly(aa)
 ```
+
+```{r}
+#| label: comp-mots
+#| fig-cap: Mots les plus fréquents 
+#| fig-asp: 1.8 
+
+aa <- czz |> 
+  ggplot() +
+  aes(x = profession, y = n, fill = mots) +
+  geom_bar(stat="identity", position = "dodge") +
+  labs(
+    title = "Mots les plus fréquents par profession",
+    caption = "Nombre d'occurences des mots significatifs
+    (réduits à leur racine) les plus fréquents."
+  ) +
+  theme_light() +
+scale_color_viridis_c() +
+  theme(
+    plot.title = element_text(size = 14, face = "bold"),
+    plot.subtitle = element_text(size = 12),
+    axis.title.y.right = element_blank(),
+    legend.title = element_text(size = 12),
+    axis.title.y = element_blank(),
+    axis.title.x = element_blank(),
+    axis.text.x = element_text(size = 10, angle = 50, hjust = 1),
+    axis.text.y = element_blank(),
+    legend.position = "none") +
+    facet_grid(mots ~.,
+               scales = "free")
+
+ggplotly(aa)
+```
+
+# Association de mots
+
+Le mot qui revient le plus souvent est "*patient*". On peut donc s'intéresser
+aux mots qui sont associés à ce mot. On va donc créer un tableau de contingence
+entre le mot "*patient*" et les autres mots significatifs. On prend comme
+limite un coefficient de corrélation supérieur à 0,6.
+s
+```{r}
+#| label: tbl-assoc-patient
+#| tbl-cap: Mots associés au mot "patient" (corrélation > 0.6)
+
+docs <- Corpus(VectorSource(tt$texte))
+docs <- tm_map(docs, content_transformer(tolower))
+docs <- tm_map(docs, removeNumbers)
+docs <- tm_map(docs, removeWords, stopwords("french"))
+docs <- tm_map(docs, removeWords, mesmots$value) 
+docs <- tm_map(docs, removeWords, "ver") 
+docs <- tm_map(docs, removePunctuation)
+docs <- tm_map(docs, stripWhitespace)
+docs <- tm_map(docs, stemDocument)
+dtm <- TermDocumentMatrix(docs)
+aap <- findAssocs(dtm, terms = "patient", corlimit = 0.59)
+
+aa <- as_tibble(aap$patient, rownames = "mots") |>
+  dplyr::filter(! mots == "ver") |> 
+  dplyr::rename(corr = value) |>
+  dplyr::arrange(desc(corr)) |> 
+  ggplot() +
+  aes( x =  fct_reorder(mots, corr, .desc = TRUE), y = corr, fill = corr) +
+    geom_col() +
+  scale_fill_viridis_c() +
+    theme_light() +
+    labs(
+    title = "Mots associés au mot \"patient\"",
+    caption = "Mots associés au mot \"patient\" (cœfficient de corrélation
+    supérieur à 0.6)", 
+    y = "Coefficient de corrélation"
+  ) +
+  theme(
+    plot.title = element_text(size = 14, face = "bold"),
+    plot.subtitle = element_text(size = 12),
+    axis.title.y.right = element_blank(),
+    legend.title = element_text(size = 12),
+    axis.title.y = element_text(size = 12),
+    axis.title.x = element_blank(),
+    axis.text.x = element_text(size = 10, angle = 50, hjust = 1),
+    axis.text.y = element_text(size = 10),
+    legend.position = "none")
+
+ggplotly(aa)
+```
+
 
 
 
