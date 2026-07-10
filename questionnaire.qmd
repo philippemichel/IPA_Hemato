@@ -1,0 +1,261 @@
+---
+subtitle: "Questionnaire"
+
+---
+
+
+```{r}
+#| label: setup
+
+library("baseph")
+library("tidyverse")
+library("gtsummary")
+library("kableExtra")
+library("ggstats")
+
+expx <- FALSE
+classeur <- "hdjto"
+if (exp){system(paste0("rm -f ",classeur))}
+#
+theme_gtsummary_language(language = "fr", decimal.mark = ",")
+# theme_gtsummary_journal(journal = "jama")
+options(OutDec = ",")
+
+```
+
+```{r}
+#| label: Import
+tt <- readODS::read_ods("datas/HDJ-TO.ods") |> 
+  mutate(across(is.character, as.factor)) |> 
+  mutate(across(Comprehension_verifiee:Comprehension_verifiee, ~fct_relevel(.x,
+    "Toujours", "Parfois", "Rarement", "Jamais"
+  ))) |> 
+    mutate(Evaluation_fragilite = fct_relevel(Evaluation_fragilite,
+    "Toujours", "Parfois"
+  )) |> 
+  mutate(across(starts_with("Recours"),~ fct_relevel(.x,                                                     "Systématique",
+  "Selon situation",
+  "Rarement", "Jamais"))) |> 
+  mutate(across(starts_with("Ancien"),~ fct_relevel(.x, "0-5ans", "6-10ans",
+                                                    ">10ans"))) |> 
+  mutate(Temps_information = fct_relevel(Temps_information, 
+                                         "10-20min", ">20min")) |> 
+  mutate(Acces_soins_support_suffisant = fct_relevel(Acces_soins_support_suffisant, 
+                                         "Oui","Partiellement" ,"Non"))
+```
+
+# Analyse
+
+## Profil du répondant
+
+```{r}
+#| label: tbl-profil
+#| tbl-cap: Profil du répondant
+
+tt |> 
+  dplyr::select(Fonction:Initie_TO) |> 
+  tbl_summary() |> 
+     bold_labels() |> 
+   modify_header(label ~ " ") |>
+  pexptabph(exp = expx, nomfich = classeur , nomsheet = "profil", lg = TRUE) 
+```
+
+# Initiation d’une thérapie orale
+
+```{r}
+#| label: tbl-initto
+#| tbl-cap: "Initiation d’une thérapie orale"
+
+tt |> 
+  dplyr::select(Initiation_mode:Comprehension_verifiee) |> 
+  tbl_summary() |> 
+     bold_labels() |> 
+   modify_header(label ~ " ") |>
+  pexptabph(exp = expx, nomfich = classeur , nomsheet = "initto", lg = TRUE) 
+```
+
+# Analyse médicamenteuse et conciliation
+
+```{r}
+#| label: tbl-concil
+#| tbl-cap: "Analyse médicamenteuse et conciliation"
+
+tt |> 
+  dplyr::select(Ord_MT_analyse:Interactions_identifiees) |> 
+  tbl_summary() |> 
+     bold_labels() |> 
+   modify_header(label ~ " ") |>
+  pexptabph(exp = expx, nomfich = classeur , nomsheet = "concil", lg = TRUE) 
+```
+
+# Évaluation globale du patient
+
+
+```{r}
+#| label: tbl-eval
+#| tbl-cap: "Évaluation globale du patient"
+
+tt |> 
+  dplyr::select(starts_with("Evalu")) |> 
+  pivot_longer(cols = everything(), names_to = "Evaluation", 
+               values_to = "Réponse") |>
+  tbl_summary(by = "Réponse") |> 
+     bold_labels() |> 
+   modify_header(label ~ " ") |>
+  pexptabph(exp = expx, nomfich = classeur , nomsheet = "eval", lg = TRUE) 
+```
+
+
+```{r}
+#| label: fig-eval
+#| fig-cap: "Évaluation globale du patient"
+
+tt |> 
+  dplyr::select(starts_with("Evalu")) |> 
+  gglikert() +
+   scale_color_viridis_c(option = "turbo", direction = 1) + 
+  labs(title = "Évaluation globale du patient")
+```
+
+# Recours aux soins de support
+
+
+```{r}
+#| label: tbl-recours
+#| tbl-cap: "Recours aux soins de support"
+
+tt |> 
+  dplyr::select(starts_with("Recours")) |> 
+  pivot_longer(cols = everything(), names_to = "Evaluation", 
+               values_to = "Réponse") |> 
+    mutate(Réponse = fct_relevel(Réponse,                                               "Systématique",
+  "Selon situation",
+  "Rarement", "Jamais")) |> 
+  tbl_summary(by = "Réponse") |> 
+     bold_labels() |> 
+   modify_header(label ~ " ") |>
+  pexptabph(exp = expx, nomfich = classeur , nomsheet = "recours", lg = TRUE) 
+```
+
+
+```{r}
+#| label: fig-recours
+#| fig-cap: "Recours aux soins de support"
+
+tt |> 
+  dplyr::select(Recours_ETP,Recours_dietetique,Recours_psychologue
+                ,Recours_assistante_sociale) |> 
+  gglikert(sort = "descending") +
+   scale_color_viridis_c(option = "turbo", direction = 1) + 
+  labs(title = "Recours aux soins de support")
+```
+
+```{r}
+#| label: tbl-recours2
+#| tbl-cap: "Recours aux soins de support"
+
+tt |> 
+  dplyr::select(Acces_soins_support_suffisant) |> 
+  tbl_summary() |> 
+     bold_labels() |> 
+   modify_header(label ~ " ") |>
+  pexptabph(exp = expx, nomfich = classeur , nomsheet = "recours2", lg = TRUE) 
+```
+
+
+# Suivi des patients sous thérapies orales
+
+
+```{r}
+#| label: tbl-suivi
+#| tbl-cap: "Suivi des patients sous thérapies orales"
+
+tt |> 
+  dplyr::select(c(Analyse_biologie, EI_detectes_tardivement:Denutrition_non_reperee)) |> 
+  tbl_summary() |> 
+     bold_labels() |> 
+   modify_header(label ~ " ") |>
+  pexptabph(exp = expx, nomfich = classeur , nomsheet = "suivi", lg = TRUE) 
+```
+
+```{r}
+#| label: suivi2
+#| tbl-cap: = "Modalités du suivi"
+
+zz <- str_split(tt$Modalites_suivi, pattern = "/") |> 
+  unlist() |> 
+  as_tibble() |> 
+  group_by(value) |> 
+  summarise(n = n()) |> 
+  rename('Modalités de suivi' = value) |>
+  arrange(desc(n)) 
+
+zz |> 
+  kbl(escape = TRUE, longtable = lg, booktabs = TRUE) |>
+    kable_styling(latex_options = c("scale_down", "repeat_header"))
+
+if(expx) {
+ write_ods(zz,path = classeur, sheet = "modsuivi", append = TRUE)
+}
+```
+
+```{r}
+#| label: suivi3
+#| tbl-cap: = "Gestion_anomalie"
+
+zz <- str_split(tt$Gestion_anomalie, pattern = "/") |> 
+  unlist() |> 
+  as_tibble() |> 
+  group_by(value) |> 
+  summarise(n = n()) |> 
+  rename('Gestion_anomalie' = value) |>
+  arrange(desc(n)) 
+
+zz |> 
+  kbl(escape = TRUE, longtable = lg, booktabs = TRUE) |>
+      kable_styling(latex_options = c("scale_down", "repeat_header"))
+
+
+if(expx) {
+ write_ods(zz, path = classeur, sheet = "gestano", append = TRUE)
+}
+```
+
+# Organisation future
+
+
+```{r}
+#| label: tbl-futur
+#| tbl-cap: "Organisation future"
+
+tt |> 
+  dplyr::select(Parcours_structurer_utile:Experience_patient) |> 
+  tbl_summary() |> 
+     bold_labels() |> 
+   modify_header(label ~ " ") |>
+  pexptabph(exp = expx, nomfich = classeur , nomsheet = "futur", lg = TRUE) 
+```
+
+# Priorités
+
+```{r}
+
+#| label: priorite
+#| tbl-cap: Priorités
+
+zz <- tt |> 
+  dplyr::select(starts_with("Priorite")) |>
+  summarise(across(everything(), ~ sum(.x))) |> 
+  pivot_longer(cols = everything(), names_to = "Priorité", values_to = "Note") |> 
+   arrange(desc(Note))
+
+zz |> 
+    kbl(escape = TRUE, longtable = lg, booktabs = TRUE) |>
+      kable_styling(latex_options = c("scale_down", "repeat_header"))
+
+
+if(expx) {
+ write_ods(zz, path = classeur, sheet = "priorites", append = TRUE)
+}
+```
+
