@@ -1,9 +1,7 @@
 ---
-subtitle: "Analyse simple du texte"
+title: "Rapport statistique V1.0"
 cache: false
 ---
-::: {.panel-tabset}
-
 # Généralités
 
 On ne travaille que sur les mots (ou pour être exact les racines des mots) en analysant uniquement leur fréquence dans le texte.
@@ -18,7 +16,8 @@ L'étude comprend deux partie :
 
 ### Questionnaires
 
-Vu le très faible nombre de cas aucun test ne eut être réalisé, l'analyse sera uniquement descriptive. Plusieurs tableaux présentant les réponses seront réalisés (nombre & pourcentage)
+Vu le très faible nombre de cas aucun test ne eut être réalisé, l'analyse sera uniquement descriptive.\\
+Plusieurs tableaux présentant les réponses seront réalisés (nombre & pourcentage)
  :
 
 - Profil du répondant
@@ -85,7 +84,7 @@ mesmots <- as_tibble(c("c'est", "ça", "donc", "fait", "parce",
              "ben", "peu", "tout", "car", "quelqu","qu'on",
              "qu'il","c’est", "qu’on","j’ai", "qu'el", "peuvent", "ell",
              "aller", "donné", "ver", "doit", "donc", "dirai",
-             "puisqu","ell","vraiment", "évidem", "non","jai", "sai","déjà", "qu'il", "n'y", "qu'on", "n’ai","n’y", "tous", "avoir","estc", "autr", "...", "quon", "ouai", "entr", "dire", "dirai" ,"commen", "voi"))
+             "puisqu","ell","vraiment", "évidem", "non","jai", "sai","déjà", "qu'il", "n'y", "qu'on", "n’ai","n’y", "tous", "avoir","estc", "autr", "...", "quon", "ouai", "entr", "dire", "dirai" ,"commen", "voi", "2"))
 
 
 for(nt in 1:8){
@@ -156,14 +155,15 @@ zz |>
 ```{r}
 #| label: macro-figfq
 
-figfq <- function(d = docs,nmax = 6){
+figfq <- function(d = docs,nmax = 6, np = nprof){
+  tprof = paste0("Mots les plus fréquents - ",np)
   gg <- d |> 
   dplyr::filter(n > nmax) |> 
   ggplot() +
   aes(x = fct_reorder(mots,n, .desc = FALSE), y = n, fill = n) +
   geom_bar(stat="identity") +
   labs(
-    title = "Mots les plus fréquents - IDE en consultation",
+    title = tprof,
     y = "Fréquence",
     caption = "Nombre d'occurence des mots significatifs (réduits à leur racine)  les plus fréquents.",
   ) +
@@ -179,20 +179,16 @@ figfq <- function(d = docs,nmax = 6){
     axis.text.y = element_text(size = 12),
     legend.position = "none") +
     coord_flip() 
-  
-ggplotly(gg)
+
+  return(gg)
 }
 ```
 
 
-### Bibiliographie
 
-::: {#refs}
-:::
 
 # Entretiens
 
-::: {.panel-tabset group="Entretiens"}
 
 ## IDE en consultation
 
@@ -232,6 +228,7 @@ nuage(docs)
 figfq()
 ```
 
+\clearpage
 ## Assistante sociale
 
 
@@ -262,6 +259,7 @@ nuage()
 figfq(nmax = 7)
 ```
 
+\clearpage
 ## Cadre supérieure de santé
 
 
@@ -293,6 +291,7 @@ nuage()
 figfq(nmax = 7)
 ```
 
+\clearpage
 ## Pharmacien 1
 
 
@@ -324,6 +323,7 @@ nuage()
 figfq(nmax = 7)
 ```
 
+\clearpage
 ## Pharmacien 2
 
 **`r prof[5]`**
@@ -355,6 +355,7 @@ nuage()
 figfq(nmax = )
 ```
 
+\clearpage
 ## Cadre faisant fonction
 
 **`r prof[6]`**
@@ -386,6 +387,7 @@ nuage()
 figfq(nmax = 7)
 ```
 
+\clearpage
 ## Hématologue
 
 **`r prof[7]`**
@@ -417,6 +419,7 @@ nuage()
 figfq(nmax = 3)
 ```
 
+\clearpage
 ## Secrétaire médicale
 
 **`r prof[8]`**
@@ -448,7 +451,7 @@ nuage()
 figfq(nmax = 2)
 ```
 
-:::
+ 
 
 # Comparaisons
 
@@ -472,7 +475,7 @@ czz <- zz |>
 #| fig-cap: Mots les plus fréquents par profession
 #| fig-asp: 1.8 
 
-aa <- czz |> 
+czz |> 
   ggplot() +
   aes(x = fct_reorder(mots,n, .desc = TRUE), y = n, fill = profession) +
   geom_bar(stat="identity", position = "dodge") +
@@ -495,7 +498,7 @@ scale_color_viridis_c() +
     legend.position = "none") +
     facet_grid(profession ~.,
                scales = "free") 
-ggplotly(aa)
+
 ```
 
 ```{r}
@@ -503,7 +506,7 @@ ggplotly(aa)
 #| fig-cap: Mots les plus fréquents 
 #| fig-asp: 1.8 
 
-aa <- czz |> 
+czz |> 
   ggplot() +
   aes(x = profession, y = n, fill = mots) +
   geom_bar(stat="identity", position = "dodge") +
@@ -527,7 +530,6 @@ scale_color_viridis_c() +
     facet_grid(mots ~.,
                scales = "free")
 
-ggplotly(aa)
 ```
 
 # Association de mots
@@ -553,7 +555,7 @@ docs <- tm_map(docs, stemDocument)
 dtm <- TermDocumentMatrix(docs)
 aap <- findAssocs(dtm, terms = "patient", corlimit = 0.59)
 
-aa <- as_tibble(aap$patient, rownames = "mots") |>
+as_tibble(aap$patient, rownames = "mots") |>
   dplyr::filter(! mots == "ver") |> 
   dplyr::rename(corr = value) |>
   dplyr::arrange(desc(corr)) |> 
@@ -579,14 +581,13 @@ aa <- as_tibble(aap$patient, rownames = "mots") |>
     axis.text.y = element_text(size = 10),
     legend.position = "none")
 
-ggplotly(aa)
 ```
 
 
 
 # Questionnaire
 
-::: {.panel-tabset group="qQuestionnaires"}
+  {.panel-tabset group="qQuestionnaires"}
 
 ```{r}
 #| label: Import
@@ -676,13 +677,12 @@ tt |>
 #| label: fig-eval
 #| fig-cap: "Évaluation globale du patient"
 
-aa <- tt |> 
+ tt |> 
   dplyr::select(starts_with("Evalu")) |> 
   gglikert() +
    scale_color_viridis_c(option = "turbo", direction = 1) + 
   labs(title = "Évaluation globale du patient")
 
-ggplotly(aa)
 ```
 
 ## Recours aux soins de support
@@ -710,14 +710,13 @@ tt |>
 #| label: fig-recours
 #| fig-cap: "Recours aux soins de support"
 
-aa <- tt |> 
+tt |> 
   dplyr::select(Recours_ETP,Recours_dietetique,Recours_psychologue
                 ,Recours_assistante_sociale) |> 
   gglikert(sort = "descending") +
    scale_color_viridis_c(option = "turbo", direction = 1) + 
   labs(title = "Recours aux soins de support")
 
-ggplotly(aa)
 ```
 
 ```{r}
@@ -761,7 +760,7 @@ zz <- str_split(tt$Modalites_suivi, pattern = "/") |>
   arrange(desc(n)) 
 
 zz |> 
-  kbl(escape = TRUE, longtable = lg, booktabs = TRUE) |>
+  kbl(escape = TRUE, longtable = FALSE, booktabs = TRUE) |>
     kable_styling(latex_options = c("scale_down", "repeat_header"))
 
 if(expx) {
@@ -782,7 +781,7 @@ zz <- str_split(tt$Gestion_anomalie, pattern = "/") |>
   arrange(desc(n)) 
 
 zz |> 
-  kbl(escape = TRUE, longtable = lg, booktabs = TRUE) |>
+  kbl(escape = TRUE, longtable = FALSE, booktabs = TRUE) |>
       kable_styling(latex_options = c("scale_down", "repeat_header"))
 
 
@@ -820,7 +819,7 @@ zz <- tt |>
    arrange(desc(Note))
 
 zz |> 
-    kbl(escape = TRUE, longtable = lg, booktabs = TRUE) |>
+    kbl(escape = TRUE, longtable = FALSE, booktabs = TRUE) |>
       kable_styling(latex_options = c("scale_down", "repeat_header"))
 
 
@@ -829,6 +828,6 @@ if(expx) {
 }
 ```
 
-:::
+ 
 
-:::
+ 

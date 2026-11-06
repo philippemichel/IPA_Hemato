@@ -3,6 +3,16 @@
 .RData
 .Ruserdata
 datas
-
 /.quarto/
 **/*.quarto_ipynb
+*.tex
+*.ist
+*.g*
+*.html
+*.pdf
+*.ods
+*.xlsx
+*cache*
+*files*
+doc/
+figures/

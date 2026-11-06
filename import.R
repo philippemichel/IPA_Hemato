@@ -1,47 +1,45 @@
-# Title: Import IPA hémato
-# author: Philm
-# date: 06/07/26
-  
-  
-  
-  
-library("tidyverse")
-library("tm")
+#  ------------------------------------------------------------------------
+#
+# Title : Import HDJ-TO-Hemato
+#    By : PhM
+#  Date : 2026-02-23
+#
+#  ------------------------------------------------------------------------
+library(tidyverse)
+library(labelled)
+library(readODS)
+library(baseph)
 
-tt <- NULL
-prof <- c("IDE en consultation", "Assistante sociale", 
-          "Cadre supérieure de santé", "Pharmacien",
-          "Pharmacien", "Cadre faisant fonction",
-          "Hématologue", "Secrétaire médicale")
+#
+#   Professionnels de santé
+#
+pros <- read_ods("data/hdj_hemato.ods", sheet = "professionnels") |>
+  janitor::clean_names() |>
+  mutate(across(where(is.character), as.factor)) |>
+  mutate(profession = fct_relevel(
+    profession,
+    "Médecin", "IDE", "Aide-soignant(e)", "Cadre de santé", "Autre"
+  )) |>
+  mutate(type_etablissement = fct_relevel(
+    type_etablissement,
+    "Centre hospitalier universitaire (CHU)",
+    "Centre hospitalier (CH)",
+    "Clinique privée",
+    "Autre"
+  )) |>
+  mutate(anciennete = fct_relevel(
+    anciennete,
+    "Moins de 2 ans",
+    "2-5 ans",
+    "6-10 ans",
+    "Plus de 10 ans"
+  ))
 
-mesmots <- c("cest", "ça", "donc", "fait", "parce", "peut","quand",
-             "être", "puis", "aussi", "plus", "fois", "là", "sous", "après",
-             "peux", "alors", "beaucoup", "comme", "quil", "faut", "voilà",
-             "vont","oui", "peutêtr", "ben", "peu", "tout", "car", "quelqu",
-             "puisqu","ell","vraiment", "évidem", "non","jai", "sai", "déjà",
-             "tous", "avoir","estc", "autr", "...", "quon", "ouai", "entr")
+bn <- read_ods("data/hdj_hemato.ods", sheet = "bnom_pros")
+var_label(pros) <- bn$nom
 
-
-for(nt in 1:8){
-nomtxt <- paste0("datas/entretien",nt,".txt")
-texte <- readr::read_file(nomtxt)
-docs <- Corpus(VectorSource(texte))
-toSpace <- content_transformer(function (x , pattern ) gsub(pattern, " ", x))
-docs <- tm_map(docs, removePunctuation)
-docs <- tm_map(docs, toSpace, ",")
-docs <- tm_map(docs, toSpace, "’")
-docs <- tm_map(docs, content_transformer(tolower))
-docs <- tm_map(docs, stripWhitespace)
-docs <- tm_map(docs, removeWords, stopwords("fr"))
-docs <- tm_map(docs, removeWords, mesmots)
-docs <- tm_map(docs, stemDocument)
-
-
-profession <- prof[nt]
-ll <- c(nt,profession,docs)
-tt <- rbind(tt,ll)
-}
-
-tt <- as_tibble(tt)
-names(tt) <- c("id", "profession", "texte")
-
+#
+#  Save
+#
+save(pros, file = "data/hdj_hemato.RData")
+load("data/hdj_hemato.RData")

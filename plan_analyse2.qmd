@@ -1,0 +1,69 @@
+---
+subtitle: "Plan d'analyse statistique V1.0"
+lof: false
+lot: false
+toc: false
+---
+
+```{r info}
+rm(list=ls())
+library("baseph")
+library("tidyverse")
+library("kableExtra")
+```
+
+# Plan d'analyse statistique
+
+
+## Généralités
+
+Le risque $\alpha$ retenu sera de \num{0.05} & la puissance de \num{0.8}. 
+
+Vu le faible nombre de cas on ne fera pas d'hypothèse de normalité. Les variables numériques seront présentées par leur médiane avec les quartiles & comparées grâce au test non paramétrique de Wilcoxon pour séries non appariées. Les données discrètes seront présentées en nombre & pourcentage. L'intervalle de confiance des pourcentages (à \perc{95}) sera calculé par la méthode de Wilson. Le test du Khi<sup>2</sup> de Spearman sera utilisé sous réserve d'un effectif suffisant, à défaut le test exact de Fischer. Des graphiques seront réalisés pour les résultats importants (package `ggplot2` [@ggplot]). 
+
+L'analyse statistique sera réalisée avec le logiciel **R** [@rstat] & divers packages. Outre ceux cités dans le texte on utilisera en particulier `tidyverse` [@tidy] & `baseph` [@baseph].
+
+Un dépôt GitHub sera utilisé qui ne comprendra que le code & non les données ou résultats. Au besoin un faux tableau de données sera présenté pour permettre des tests.
+
+\url{<https://github.com/philippemichel/HDJ-TO-Hemato/>}
+
+
+
+## Taille de l'échantillon
+
+
+Il s'agit d'une enquête de pratique professionnelle qui comprend deux volets : 
+
+ - Un questionnaire de pratique remis aux seuls médecins. Comme toute étude purement descriptive par sondage il est difficile de définir un nombre de cas nécessaire. 
+ 
+ - Des entretiens semi-dirigés avec des professionnels de santé impliqués dans la prise en charge des patients hématologiques en HDJ. Pour ces professionnels on aura dans un premier temps un cas par catégorie professionnelle puis si possible dix cas par catégorie avec un minimum à cinq cas. 
+
+
+## Données manquantes
+
+Le décompte des données manquantes sera réalisé & présenté par un tableau ou graphique (package `visdat` [@visdat]). Les variables comportant trop de données manquantes (> 20 %) ou non utilisables ne seront pas prises en compte après validation par le promoteur.
+
+
+## Questionnaire médecins
+
+### Caractéristiques des répondants
+
+Un tableau présentera les caractéristiques démographiques et professionnelles des répondants complété par un graphique (pyramide des âges).
+
+### Analyse simple
+
+Des tableaux présenteront les résultats bruts du questionnaire avec les effectifs et pourcentages (package `gtsummary` [@gtsummary]). Nombre d'items sont des échelles de Likert. Dans ce cas, un tableau spécifique sera présenté complété par une représentation graphique (package ggstats [@ggstats]). 
+
+
+## Entretien semi-dirigés
+é
+Les entretiens seront analysés par une analyse de contenu thématique (package `tidytext` [@tidytext]) après nettoyage puis réduction des mots à leur racine (*text-stemming*). Les thèmes émergents seront présentés dans un tableau. des graphiques de type nuage de mots (package `wordcloud` [@wordcloud]) pourront être réalisés.
+
+On étudiera les rapprochements de mots sur les plus fréquents ou les plus significatifs.
+
+
+è&
+## Bibliographie
+
+
+
